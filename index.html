@@ -78,7 +78,7 @@ b.s {
 S=new Class({
 	brd:[],
 	sl:false,
-	row:4,
+	row:3,
 	initialize:function(){
 		var t = this, E = Element;
 
@@ -94,50 +94,49 @@ S=new Class({
 					a:false
 				};
 		}
-		
+
 		t.cps();
 	},
 	cps:function(){
 		var t = this, r = $random;
-		
+
 		[r(1,5),r(1,5),r(1,5)].each(function(_cs,i){
 			var av = t.ga();
 			if(av.length===0) return t.eg();
 			av=av[r(0,av.length-1)];
-			av = t.brd[av[0]][av[1]];
-			av.c=_cs;
-			av.p=new Element('b',{'class':'c'+_cs}).inject(av.e);
+			var obj=t.brd[av[0]][av[1]];
+			obj.c=_cs;
+			obj.p=new Element('b',{'class':'c'+_cs}).inject(obj.e);
 
-			var temp = new Fx.Morph(av.p,{
-				duration:300,
-				link:'chain',
+			var e = obj.e.setStyle('z-index',1000);
+
+			var ta = obj.p.get('morph').setOptions({
+				duration:150,
+				link:'cancel',
 				transition:'sine:in'
 			}).set({'opacity':0});
-			
-			
-			(function(){
-				temp.start({
-					opacity:[0,1],
-					width:[20,50],
-					height:[23,55],
-					margin:['-12px 0 0 -10px','-28px 0 0 -25px']
+
+
+			obj.t = (function(){
+				ta.start({
+					opacity:[0,2],
+					width:[20,60],
+					height:[23,68],
+					margin:['-12px 0 0 -10px','-34px 0 0 -30px']
 				}).chain(function(){
 					this.setOptions({
 						transition:'quad:out',
-						duration:150
-					});
-					this.start({
+						duration:200
+					}).start({
 						width:40,
 						height:45,
 						margin:'-23px 0 0 -20px'
-					})
-				});
-				
-			}).delay(i*400,this)
-		})
-		for(var x=0;x<3;x++){
+					});
+				},(function(){ e.setStyle('z-index',0); }).bind(this));
+			}).delay(i*300,this);
 
-		}
+			t.rc(av[0],av[1],true);
+		});
 	},
 	ga:function(){
 		var t = this;
@@ -150,7 +149,10 @@ S=new Class({
 		return ra;
 	},
 	eg:function(){
-		alert('Game is over');
+		var t = this;
+		if(t.end) return;
+		t.end = true;
+		console.log('Game is over');
 	},
 	clk:function(x,y){
 		var t = this;
@@ -218,6 +220,7 @@ S=new Class({
 
 		m([[sx,sy]]);
 	},
+
 	sar:function(d){
 		var t = this;
 		for(var x=0;x<7;x++)
@@ -228,7 +231,7 @@ S=new Class({
 			};
 	},
 
-	rc:function(sx,sy){
+	rc:function(sx,sy,cps){
 		var t = this, b = t.brd, fr = [], lc = 0, pcs = [], rct = 0;
 
 		var gd1 = function(x,y){
@@ -239,12 +242,12 @@ S=new Class({
 
 			return [x,y];
 		};
-		
+
 		var gd2 = function(x,y){
 			if(x===0 || y===6) return [x,y];
 
 			var diff = 6-y;
-			
+
 			if(diff<=x) y+=diff, x-=diff;
 			else y+=x, x=0;
 
@@ -252,34 +255,32 @@ S=new Class({
 		};
 
 		var extendRows = function(){
-			fr.extend(pcs);
+			if(pcs.length>=t.row){
+				fr.extend(pcs);
+				rct++;
+			}
 			lc = 0;
 			pcs = [];
-			rct++;
 		};
 
 		var checkSpot = function(x,y){
 			var obj = b[x][y];
 
-			if(obj.c===0) {
-				if(pcs.length>=t.row) extendRows();
-				return lc = 0, pcs = [];
-			}
+			if(obj.c===0)
+				return extendRows();
 
-			if(obj.c!==lc) {
-				if(pcs.length>=t.row) extendRows();
-				return lc = obj.c, pcs = [[x,y]];
-			}
+			if(obj.c!==lc)
+				return extendRows(), lc = obj.c, pcs = [[x,y]];
 
 			pcs[pcs.length] = [x,y];
 		};
 
 		for(var y=0;y<7;y++) checkSpot(sx,y);
-		if(pcs.length>=t.row) extendRows();
-		
+		extendRows();
+
 		for(var x=0;x<7;x++) checkSpot(x,sy);
-		if(pcs.length>=t.row) extendRows();
-		
+		extendRows();
+
 		var diagOne = gd1(sx,sy);
 		for(var x=0;x<7;x++){
 			if(diagOne[0]>=7 || diagOne[1]>=7) break;
@@ -287,8 +288,8 @@ S=new Class({
 			diagOne[0]++;
 			diagOne[1]++;
 		}
-		if(pcs.length>=t.row) extendRows();
-		
+		extendRows();
+
 		var diagTwo = gd2(sx,sy);
 		for(var x=0;x<7;x++){
 			if(diagTwo[0]>=7 || diagTwo[1]<0) break;
@@ -296,21 +297,64 @@ S=new Class({
 			diagTwo[0]++;
 			diagTwo[1]--;
 		}
-		if(pcs.length>=t.row) extendRows();
+		extendRows();
 
-		if(rct===0) t.cps();
-		else t.rm(fr);
+		if(rct===0 && !cps) return t.cps();
+		if(rct>0) return t.rm(fr);
+		var av = t.ga();
+		if(av.length===0) return t.eg();
 	},
-	
+
 	rm:function(rows){
 		var t = this;
-		
+
 		rows.each(function(coords){
 			var obj = t.brd[coords[0]][coords[1]];
 			if(obj.c===0) return;
-			obj.p.destroy();
+			var p = obj.p;
 			obj.p = null;
 			obj.c = 0;
+			
+			$clear(obj.t);
+
+			var e = obj.e.setStyle('z-index',1000);
+
+			var ta = p.get('morph')
+				.clearChain()
+				.cancel()
+				.setOptions({
+					duration:100,
+					transition:'quad:out'
+				})
+				.set({
+					opacity:1,
+					width:40,
+					height:45,
+					margin:'-23px 0 0 -20px'
+				})
+				.start({
+					width:20,
+					height:23,
+					margin:'-12px 0 0 -10px'
+				})
+				.chain(
+					function(){
+						this.setOptions({
+							duration:800,
+							transition:'quart:out'
+						});
+						this.start({
+							opacity:[1,0],
+							width:60,
+							height:68,
+							margin:'-34px 0 0 -30px'
+						});
+					},
+					function(){
+						e.setStyle('z-index',0);
+						p.destroy();
+					}
+				);
 		},this);
 	}
 });
